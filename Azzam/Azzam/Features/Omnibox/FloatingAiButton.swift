@@ -22,36 +22,26 @@ struct FloatingAiButton: View {
             action()
         }) {
             ZStack {
-                // Glow effect
+                // Subtle Glow effect
                 Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.purple.opacity(0.6), Color.blue.opacity(0.6), Color.pink.opacity(0.6)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .fill(Color.white.opacity(0.15))
                     .frame(width: 60, height: 60)
-                    .blur(radius: isAnimating ? 20 : 10)
-                    .scaleEffect(isAnimating ? 1.2 : 1.0)
+                    .blur(radius: isAnimating ? 15 : 5)
+                    .scaleEffect(isAnimating ? 1.15 : 1.0)
                 
                 // Main Button
                 Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.purple, Color.blue, Color.pink],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .fill(Color.black.opacity(0.8))
                     .frame(width: 60, height: 60)
-                    .shadow(color: Color.purple.opacity(0.5), radius: 10, x: 0, y: 5)
+                    .overlay(
+                        Circle().stroke(Color.white.opacity(0.2), lineWidth: 1)
+                    )
+                    .shadow(color: Color.black.opacity(0.3), radius: 10, x: 0, y: 5)
                 
                 // Icon
                 Image(systemName: "sparkles")
-                    .font(.system(size: 24, weight: .bold))
+                    .font(.system(size: 22, weight: .semibold))
                     .foregroundColor(.white)
-                    .rotationEffect(.degrees(isAnimating ? 10 : -10))
             }
         }
         .buttonStyle(PlainButtonStyle())
