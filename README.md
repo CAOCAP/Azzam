@@ -23,3 +23,23 @@ CAOCAP/Azzam abandons the complex, cluttered menus of traditional IDEs. When you
 ## ⚠️ Development Status: Day 1
 This project is in its absolute infancy. We are currently building the foundational proof-of-concept.
 > If you are reading this, you are discovering the project at its inception. We welcome early visionaries, engineers, and contributors to join us at the ground level and help shape the future of this platform.
+
+## Contribution Guidelines & Git Workflow
+To maintain a high-quality codebase and clean history, we adhere to the following Git workflow:
+
+### Branching Strategy
+* **`main`**: The primary, stable branch. Always deployable.
+* **`develop`**: The integration branch for new features before they hit `main`.
+* **`feature/<name>`**: For new features (branch off `develop`, merge into `develop`).
+* **`fix/<name>`**: For bug fixes.
+* **`refactor/<name>`**: For code structure changes without behavioral changes.
+
+### Conventional Commits
+We strictly use [Conventional Commits](https://www.conventionalcommits.org/). When committing, use the configured template to structure your message:
+* `feat:` (New feature)
+* `fix:` (Bug fix)
+* `refactor:` (Code refactor)
+* `docs:` (Documentation changes)
+* `chore:` (Build process, tooling, maintenance)
+
+*Example*: `feat(ui): add animated empty states to projects list`
