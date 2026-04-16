@@ -14,6 +14,12 @@ CAOCAP/Azzam abandons the complex, cluttered menus of traditional IDEs. When you
 * 🏗️ **Build:** A completely integrated code editor and terminal. Modify any external website on the fly or build your own from the ground up with the help of your Agentic Co-Captain.
 * 🤝 **Collaborate:** Connect and create alongside your AI agent and the open-source community to continuously shape and define the web ecosystem.
 
+## Platform & Technology
+* **Ecosystem Native:** Designed as a primary native macOS application, with extending experiences crafted for iPadOS and iOS mobility.
+* **Apple Stack:** Built utilizing Swift and SwiftUI to ensure a seamless, high-performance, and unified interface across Apple devices.
+* **Browser Engine:** Powered by Apple's native WebKit (`WKWebView`) for lightning-fast, resource-efficient web exploration.
+* **Agentic Brain:** The Co-Captain's intelligence is fueled by cutting-edge remote LLMs (such as Gemini, ChatGPT, and Claude), integrated via APIs to ensure the most powerful and up-to-date reasoning capabilities.
+
 ## ⚠️ Development Status: Day 1
 This project is in its absolute infancy. We are currently building the foundational proof-of-concept.
 > If you are reading this, you are discovering the project at its inception. We welcome early visionaries, engineers, and contributors to join us at the ground level and help shape the future of this platform.
