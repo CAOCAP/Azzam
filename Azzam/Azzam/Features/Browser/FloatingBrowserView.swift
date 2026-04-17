@@ -169,11 +169,32 @@ struct FloatingBrowserView: View {
         }
     }
     
+    @State private var isExpanding: Bool = true
+    
     private func cycleSize() {
         let allCases = BrowserSizeLevel.allCases
         guard let currentIndex = allCases.firstIndex(of: manager.browserSizeLevel) else { return }
         
-        let nextIndex = (currentIndex + 1) % allCases.count
+        var nextIndex: Int
+        
+        if manager.browserSizeLevel == .tiny {
+            isExpanding = true
+            nextIndex = 1
+        } else if manager.browserSizeLevel == .fullScreen {
+            isExpanding = false
+            nextIndex = currentIndex - 1
+        } else {
+            // In between tiny and fullScreen, follow the current direction
+            nextIndex = isExpanding ? currentIndex + 1 : currentIndex - 1
+        }
+        
+        // Final safety check and direction flip at bounds
+        if nextIndex >= allCases.count - 1 {
+            isExpanding = false
+        } else if nextIndex <= 0 {
+            isExpanding = true
+        }
+        
         let nextLevel = allCases[nextIndex]
         
         withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
