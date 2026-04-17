@@ -6,6 +6,8 @@ struct FloatingBrowserView: View {
     
     // For resizing
     @State private var dragOffset: CGSize = .zero
+    // For full-screen drag-to-dismiss
+    @State private var fullScreenDragOffset: CGFloat = 0
     
     var currentDimensions: CGSize {
         manager.browserSizeLevel.dimensions(in: containerSize)
@@ -18,12 +20,13 @@ struct FloatingBrowserView: View {
     var body: some View {
         ZStack {
             // Glassmorphism background
-            RoundedRectangle(cornerRadius: isFullScreen ? 0 : 24, style: .continuous)
+            // We use a slight corner radius even in full screen if dragged down to feel like a card
+            RoundedRectangle(cornerRadius: isFullScreen ? (fullScreenDragOffset > 0 ? 24 : 0) : 24, style: .continuous)
                 .fill(.ultraThinMaterial)
-                .shadow(color: Color.black.opacity(isFullScreen ? 0 : 0.15), radius: isFullScreen ? 0 : 20, x: 0, y: isFullScreen ? 0 : 10)
+                .shadow(color: Color.black.opacity(isFullScreen ? (fullScreenDragOffset > 0 ? 0.15 : 0) : 0.15), radius: isFullScreen ? (fullScreenDragOffset > 0 ? 20 : 0) : 20, x: 0, y: isFullScreen ? (fullScreenDragOffset > 0 ? 10 : 0) : 10)
                 .overlay(
-                    RoundedRectangle(cornerRadius: isFullScreen ? 0 : 24, style: .continuous)
-                        .stroke(Color.white.opacity(isFullScreen ? 0 : 0.2), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: isFullScreen ? (fullScreenDragOffset > 0 ? 24 : 0) : 24, style: .continuous)
+                        .stroke(Color.white.opacity(isFullScreen ? (fullScreenDragOffset > 0 ? 0.1 : 0) : 0.2), lineWidth: 1)
                 )
             
             VStack(spacing: 0) {
@@ -31,13 +34,12 @@ struct FloatingBrowserView: View {
                 ZStack {
                     HStack {
                         Spacer()
-                        if !isFullScreen {
-                            Capsule()
-                                .fill(Color.secondary.opacity(0.5))
-                                .frame(width: 40, height: 5)
-                                .padding(.top, 12)
-                                .padding(.bottom, 8)
-                        }
+                        // Always show handle to indicate it's draggable/dismissable
+                        Capsule()
+                            .fill(Color.secondary.opacity(0.5))
+                            .frame(width: 40, height: 5)
+                            .padding(.top, 12)
+                            .padding(.bottom, 8)
                         Spacer()
                     }
                     
@@ -72,7 +74,7 @@ struct FloatingBrowserView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .clipShape(RoundedRectangle(cornerRadius: isFullScreen ? 0 : 24, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: isFullScreen ? (fullScreenDragOffset > 0 ? 24 : 0) : 24, style: .continuous))
             
             // Resize Handle (Bottom Right)
             if !isFullScreen {
@@ -109,7 +111,33 @@ struct FloatingBrowserView: View {
             width: max(100, currentDimensions.width + dragOffset.width),
             height: max(100, currentDimensions.height + dragOffset.height)
         )
-        // Disable corner dragging when in fullscreen mode
+        // Apply vertical offset when dragging down to dismiss in full screen
+        .offset(y: fullScreenDragOffset)
+        // Full screen drag-to-dismiss gesture
+        .gesture(
+            DragGesture()
+                .onChanged { value in
+                    guard isFullScreen else { return }
+                    // Only allow dragging down
+                    if value.translation.height > 0 {
+                        fullScreenDragOffset = value.translation.height
+                    }
+                }
+                .onEnded { value in
+                    guard isFullScreen else { return }
+                    if value.translation.height > 150 {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                            manager.browserSizeLevel = .almostFullScreen
+                            fullScreenDragOffset = 0
+                            playHaptic()
+                        }
+                    } else {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            fullScreenDragOffset = 0
+                        }
+                    }
+                }
+        )
         .allowsHitTesting(true)
     }
     
