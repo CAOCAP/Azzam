@@ -140,6 +140,9 @@ struct FloatingBrowserView: View {
                     )
                     .padding(8)
                     .contentShape(Rectangle())
+                    .onTapGesture {
+                        cycleSize()
+                    }
                     .gesture(
                         DragGesture()
                             .onChanged { value in
@@ -163,6 +166,19 @@ struct FloatingBrowserView: View {
         switch handleCorner {
         case .topLeft, .bottomRight: return "arrow.up.left.and.arrow.down.right"
         case .topRight, .bottomLeft: return "arrow.up.right.and.arrow.down.left"
+        }
+    }
+    
+    private func cycleSize() {
+        let allCases = BrowserSizeLevel.allCases
+        guard let currentIndex = allCases.firstIndex(of: manager.browserSizeLevel) else { return }
+        
+        let nextIndex = (currentIndex + 1) % allCases.count
+        let nextLevel = allCases[nextIndex]
+        
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
+            manager.browserSizeLevel = nextLevel
+            playHaptic()
         }
     }
     
