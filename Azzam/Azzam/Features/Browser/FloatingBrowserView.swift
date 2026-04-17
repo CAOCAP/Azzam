@@ -5,7 +5,7 @@ struct FloatingBrowserView: View {
     let containerSize: CGSize
     
     // For resizing
-    @State private var dragOffset: CGSize = .zero
+    @State private var dragTranslation: CGSize = .zero
     // For full-screen drag-to-dismiss
     @State private var fullScreenDragOffset: CGFloat = 0
     
@@ -17,10 +17,34 @@ struct FloatingBrowserView: View {
         manager.browserSizeLevel == .fullScreen
     }
     
+    // The handle should always be in the corner opposite to where the window is anchored
+    var handleCorner: ScreenCorner {
+        switch manager.browserCorner {
+        case .topLeft: return .bottomRight
+        case .topRight: return .bottomLeft
+        case .bottomLeft: return .topRight
+        case .bottomRight: return .topLeft
+        }
+    }
+    
+    // Calculate the width during an active drag
+    var activeWidth: CGFloat {
+        let base = currentDimensions.width
+        switch handleCorner {
+        case .bottomRight, .bottomLeft:
+            // Growing right or left from bottom
+            let multiplier: CGFloat = (handleCorner == .bottomRight || handleCorner == .topRight) ? 1 : -1
+            return max(containerSize.width * 0.1, base + dragTranslation.width * multiplier)
+        case .topLeft, .topRight:
+            // Growing up/left or up/right
+            let multiplier: CGFloat = (handleCorner == .topLeft || handleCorner == .bottomLeft) ? -1 : 1
+            return max(containerSize.width * 0.1, base + dragTranslation.width * multiplier)
+        }
+    }
+    
     var body: some View {
         ZStack {
-            // Glassmorphism background
-            // We use a slight corner radius even in full screen if dragged down to feel like a card
+            // Background
             RoundedRectangle(cornerRadius: isFullScreen ? (fullScreenDragOffset > 0 ? 24 : 0) : 24, style: .continuous)
                 .fill(.ultraThinMaterial)
                 .shadow(color: Color.black.opacity(isFullScreen ? (fullScreenDragOffset > 0 ? 0.15 : 0) : 0.15), radius: isFullScreen ? (fullScreenDragOffset > 0 ? 20 : 0) : 20, x: 0, y: isFullScreen ? (fullScreenDragOffset > 0 ? 10 : 0) : 10)
@@ -30,24 +54,19 @@ struct FloatingBrowserView: View {
                 )
             
             VStack(spacing: 0) {
-                // Top bar / Grab area for dragging
+                // Top Bar / Grab Area
                 ZStack {
-                    HStack {
-                        Spacer()
-                        Capsule()
-                            .fill(Color.secondary.opacity(0.5))
-                            .frame(width: 40, height: 5)
-                            .padding(.top, 12)
-                            .padding(.bottom, 8)
-                        Spacer()
-                    }
+                    Capsule()
+                        .fill(Color.secondary.opacity(0.5))
+                        .frame(width: 40, height: 5)
+                        .padding(.vertical, 12)
                     
                     if isFullScreen {
                         HStack {
                             Spacer()
                             Button(action: {
                                 withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
-                                    manager.browserSizeLevel = .large
+                                    manager.browserSizeLevel = .medium
                                     playHaptic()
                                 }
                             }) {
@@ -76,7 +95,7 @@ struct FloatingBrowserView: View {
                             guard isFullScreen else { return }
                             if value.translation.height > 120 {
                                 withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                                    manager.browserSizeLevel = .large
+                                    manager.browserSizeLevel = .medium
                                     fullScreenDragOffset = 0
                                     playHaptic()
                                 }
@@ -88,84 +107,77 @@ struct FloatingBrowserView: View {
                         }
                 )
                 
-                // Real Web View
                 WebView(url: URL(string: "https://www.google.com")!)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Color.white.opacity(0.05))
             }
             .clipShape(RoundedRectangle(cornerRadius: isFullScreen ? (fullScreenDragOffset > 0 ? 24 : 0) : 24, style: .continuous))
             
-            // Resize Handle (Bottom Right)
+            // Resize Handle Placement
             if !isFullScreen {
-                VStack {
-                    Spacer()
-                    HStack {
-                        Spacer()
-                        Image(systemName: "arrow.up.left.and.arrow.down.right")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(.secondary)
-                            .padding(14)
-                            .background(
-                                Circle()
-                                    .fill(.ultraThinMaterial)
-                                    .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
-                            )
-                            .padding(8)
-                            .contentShape(Rectangle())
-                            .gesture(
-                                DragGesture()
-                                    .onChanged { value in
-                                        withAnimation(.interactiveSpring()) {
-                                            dragOffset = value.translation
-                                        }
-                                    }
-                                    .onEnded { value in
-                                        handleResizeEnded(translation: value.translation)
-                                        dragOffset = .zero
-                                    }
-                            )
-                    }
-                }
+                resizeHandleOverlay
             }
         }
-        .frame(
-            width: max(100, currentDimensions.width + dragOffset.width),
-            height: max(100, currentDimensions.height + dragOffset.height)
-        )
+        .frame(width: activeWidth, height: activeWidth * (containerSize.height / containerSize.width))
         .offset(y: fullScreenDragOffset)
         .allowsHitTesting(true)
     }
     
-    private func handleResizeEnded(translation: CGSize) {
-        // Simple logic: if dragged outwards significantly, increase size.
-        // If dragged inwards significantly, decrease size.
-        let delta = max(translation.width, translation.height)
-        
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
-            if delta > 40 {
-                // Increase size
-                increaseSize()
-            } else if delta < -40 {
-                // Decrease size
-                decreaseSize()
+    private var resizeHandleOverlay: some View {
+        VStack {
+            if handleCorner == .topLeft || handleCorner == .topRight { Spacer(minLength: 0) }
+            HStack {
+                if handleCorner == .topRight || handleCorner == .bottomRight { Spacer(minLength: 0) }
+                
+                Image(systemName: handleIcon)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.secondary)
+                    .padding(14)
+                    .background(
+                        Circle()
+                            .fill(.ultraThinMaterial)
+                            .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+                    )
+                    .padding(8)
+                    .contentShape(Rectangle())
+                    .gesture(
+                        DragGesture()
+                            .onChanged { value in
+                                withAnimation(.interactiveSpring()) {
+                                    dragTranslation = value.translation
+                                }
+                            }
+                            .onEnded { value in
+                                finalizeResize(translation: value.translation)
+                                dragTranslation = .zero
+                            }
+                    )
+                
+                if handleCorner == .topLeft || handleCorner == .bottomLeft { Spacer(minLength: 0) }
             }
+            if handleCorner == .bottomLeft || handleCorner == .bottomRight { Spacer(minLength: 0) }
         }
     }
     
-    private func increaseSize() {
-        let allCases = BrowserSizeLevel.allCases
-        guard let currentIndex = allCases.firstIndex(of: manager.browserSizeLevel),
-              currentIndex < allCases.count - 1 else { return }
-        manager.browserSizeLevel = allCases[currentIndex + 1]
-        playHaptic()
+    private var handleIcon: String {
+        switch handleCorner {
+        case .topLeft, .bottomRight: return "arrow.up.left.and.arrow.down.right"
+        case .topRight, .bottomLeft: return "arrow.up.right.and.arrow.down.left"
+        }
     }
     
-    private func decreaseSize() {
-        let allCases = BrowserSizeLevel.allCases
-        guard let currentIndex = allCases.firstIndex(of: manager.browserSizeLevel),
-              currentIndex > 0 else { return }
-        manager.browserSizeLevel = allCases[currentIndex - 1]
-        playHaptic()
+    private func finalizeResize(translation: CGSize) {
+        let finalWidth = activeWidth
+        let finalScale = finalWidth / containerSize.width
+        
+        // Find the closest scale level
+        let levels = BrowserSizeLevel.allCases
+        let closest = levels.min(by: { abs($0.scale - finalScale) < abs($1.scale - finalScale) }) ?? .medium
+        
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
+            manager.browserSizeLevel = closest
+            playHaptic()
+        }
     }
     
     private func playHaptic() {

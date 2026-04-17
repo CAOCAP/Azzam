@@ -46,35 +46,28 @@ enum ScreenCorner: CaseIterable {
 }
 
 enum BrowserSizeLevel: Int, CaseIterable, Comparable {
-    case small = 0
+    case tiny = 0
+    case small
     case medium
-    case large
     case fullScreen
     
     static func < (lhs: BrowserSizeLevel, rhs: BrowserSizeLevel) -> Bool {
         return lhs.rawValue < rhs.rawValue
     }
     
+    var scale: CGFloat {
+        switch self {
+        case .tiny: return 0.1
+        case .small: return 0.4
+        case .medium: return 0.6
+        case .fullScreen: return 1.0
+        }
+    }
+    
     // Returns relative size multipliers (width, height)
     func dimensions(in containerSize: CGSize) -> CGSize {
-        // We use a scaling factor to perfectly respect the device's aspect ratio.
-        // This ensures the browser is never wider or taller than the device itself.
-        let scale: CGFloat
-        
-        switch self {
-        case .small:
-            scale = 0.4
-        case .medium:
-            scale = 0.6
-        case .large:
-            scale = 0.8
-        case .fullScreen:
-            scale = 1.0
-        }
-        
         let width = containerSize.width * scale
         let height = containerSize.height * scale
-        
         return CGSize(width: width, height: height)
     }
 }
