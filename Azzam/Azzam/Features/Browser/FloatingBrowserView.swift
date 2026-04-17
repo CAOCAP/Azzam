@@ -81,10 +81,9 @@ struct FloatingBrowserView: View {
                     }
                 }
                 .contentShape(Rectangle())
-                .gesture(
+                .gesture(isFullScreen ? 
                     DragGesture()
                         .onChanged { value in
-                            guard isFullScreen else { return }
                             if value.translation.height > 0 {
                                 withAnimation(.interactiveSpring()) {
                                     fullScreenDragOffset = value.translation.height
@@ -92,10 +91,10 @@ struct FloatingBrowserView: View {
                             }
                         }
                         .onEnded { value in
-                            guard isFullScreen else { return }
                             if value.translation.height > 120 {
                                 withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
                                     manager.browserSizeLevel = .medium
+                                    isExpanding = false
                                     fullScreenDragOffset = 0
                                     playHaptic()
                                 }
@@ -105,7 +104,7 @@ struct FloatingBrowserView: View {
                                 }
                             }
                         }
-                )
+                : nil)
                 
                 WebView(url: URL(string: "https://www.google.com")!)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -170,8 +169,10 @@ struct FloatingBrowserView: View {
     
     private var handleIcon: String {
         switch handleCorner {
-        case .topLeft, .bottomRight: return "arrow.up.left.and.arrow.down.right"
-        case .topRight, .bottomLeft: return "arrow.up.right.and.arrow.down.left"
+        case .topLeft, .bottomRight:
+            return isExpanding ? "arrow.up.left.and.arrow.down.right" : "arrow.down.right.and.arrow.up.left"
+        case .topRight, .bottomLeft:
+            return isExpanding ? "arrow.up.right.and.arrow.down.left" : "arrow.down.left.and.arrow.up.right"
         }
     }
     
@@ -216,6 +217,20 @@ struct FloatingBrowserView: View {
         // Find the closest scale level
         let levels = BrowserSizeLevel.allCases
         let closest = levels.min(by: { abs($0.scale - finalScale) < abs($1.scale - finalScale) }) ?? .medium
+        
+        // Update direction based on move
+        if closest == .tiny {
+            isExpanding = true
+        } else if closest == .fullScreen {
+            isExpanding = false
+        } else if let currentIdx = levels.firstIndex(of: manager.browserSizeLevel),
+                  let targetIdx = levels.firstIndex(of: closest) {
+            if targetIdx > currentIdx {
+                isExpanding = true
+            } else if targetIdx < currentIdx {
+                isExpanding = false
+            }
+        }
         
         withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
             manager.browserSizeLevel = closest
