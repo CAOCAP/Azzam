@@ -30,11 +30,10 @@ struct FloatingBrowserView: View {
                 )
             
             VStack(spacing: 0) {
-                // Top bar / Drag Handle
+                // Top bar / Grab area for dragging
                 ZStack {
                     HStack {
                         Spacer()
-                        // Always show handle to indicate it's draggable/dismissable
                         Capsule()
                             .fill(Color.secondary.opacity(0.5))
                             .frame(width: 40, height: 5)
@@ -47,7 +46,7 @@ struct FloatingBrowserView: View {
                         HStack {
                             Spacer()
                             Button(action: {
-                                withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                                withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
                                     manager.browserSizeLevel = .almostFullScreen
                                     playHaptic()
                                 }
@@ -56,23 +55,43 @@ struct FloatingBrowserView: View {
                                     .font(.system(size: 16, weight: .bold))
                                     .foregroundColor(.secondary)
                                     .padding(16)
-                                    .contentShape(Rectangle())
+                                    .background(Circle().fill(Color.secondary.opacity(0.1)))
+                                    .padding(8)
                             }
                         }
                     }
                 }
+                .contentShape(Rectangle())
+                .gesture(
+                    DragGesture()
+                        .onChanged { value in
+                            guard isFullScreen else { return }
+                            if value.translation.height > 0 {
+                                withAnimation(.interactiveSpring()) {
+                                    fullScreenDragOffset = value.translation.height
+                                }
+                            }
+                        }
+                        .onEnded { value in
+                            guard isFullScreen else { return }
+                            if value.translation.height > 120 {
+                                withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                                    manager.browserSizeLevel = .almostFullScreen
+                                    fullScreenDragOffset = 0
+                                    playHaptic()
+                                }
+                            } else {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                                    fullScreenDragOffset = 0
+                                }
+                            }
+                        }
+                )
                 
-                // Placeholder content
-                VStack(spacing: 16) {
-                    Image(systemName: "safari")
-                        .font(.system(size: 40))
-                        .foregroundColor(.secondary)
-                    
-                    Text("Browser")
-                        .font(.headline)
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                // Real Web View
+                WebView(url: URL(string: "https://www.google.com")!)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color.white.opacity(0.05))
             }
             .clipShape(RoundedRectangle(cornerRadius: isFullScreen ? (fullScreenDragOffset > 0 ? 24 : 0) : 24, style: .continuous))
             
@@ -96,7 +115,9 @@ struct FloatingBrowserView: View {
                             .gesture(
                                 DragGesture()
                                     .onChanged { value in
-                                        dragOffset = value.translation
+                                        withAnimation(.interactiveSpring()) {
+                                            dragOffset = value.translation
+                                        }
                                     }
                                     .onEnded { value in
                                         handleResizeEnded(translation: value.translation)
@@ -111,33 +132,7 @@ struct FloatingBrowserView: View {
             width: max(100, currentDimensions.width + dragOffset.width),
             height: max(100, currentDimensions.height + dragOffset.height)
         )
-        // Apply vertical offset when dragging down to dismiss in full screen
         .offset(y: fullScreenDragOffset)
-        // Full screen drag-to-dismiss gesture
-        .gesture(
-            DragGesture()
-                .onChanged { value in
-                    guard isFullScreen else { return }
-                    // Only allow dragging down
-                    if value.translation.height > 0 {
-                        fullScreenDragOffset = value.translation.height
-                    }
-                }
-                .onEnded { value in
-                    guard isFullScreen else { return }
-                    if value.translation.height > 150 {
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
-                            manager.browserSizeLevel = .almostFullScreen
-                            fullScreenDragOffset = 0
-                            playHaptic()
-                        }
-                    } else {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                            fullScreenDragOffset = 0
-                        }
-                    }
-                }
-        )
         .allowsHitTesting(true)
     }
     
