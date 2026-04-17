@@ -46,11 +46,9 @@ enum ScreenCorner: CaseIterable {
 }
 
 enum BrowserSizeLevel: Int, CaseIterable, Comparable {
-    case superSmall = 0
-    case small
+    case small = 0
     case medium
     case large
-    case almostFullScreen
     case fullScreen
     
     static func < (lhs: BrowserSizeLevel, rhs: BrowserSizeLevel) -> Bool {
@@ -64,16 +62,12 @@ enum BrowserSizeLevel: Int, CaseIterable, Comparable {
         let scale: CGFloat
         
         switch self {
-        case .superSmall:
-            scale = 0.35
         case .small:
-            scale = 0.50
+            scale = 0.4
         case .medium:
-            scale = 0.65
+            scale = 0.6
         case .large:
-            scale = 0.80
-        case .almostFullScreen:
-            scale = 0.95
+            scale = 0.8
         case .fullScreen:
             scale = 1.0
         }

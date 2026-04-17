@@ -47,7 +47,7 @@ struct FloatingBrowserView: View {
                             Spacer()
                             Button(action: {
                                 withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
-                                    manager.browserSizeLevel = .almostFullScreen
+                                    manager.browserSizeLevel = .large
                                     playHaptic()
                                 }
                             }) {
@@ -76,7 +76,7 @@ struct FloatingBrowserView: View {
                             guard isFullScreen else { return }
                             if value.translation.height > 120 {
                                 withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                                    manager.browserSizeLevel = .almostFullScreen
+                                    manager.browserSizeLevel = .large
                                     fullScreenDragOffset = 0
                                     playHaptic()
                                 }
