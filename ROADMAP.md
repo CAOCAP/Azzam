@@ -5,7 +5,7 @@ This document serves as the master checklist for our feature recommendations and
 ## Phase 1: The Foundations & Core Nodes
 - [x] **Infinite Canvas Setup:** The root 100k x 100k scrolling workspace.
 - [x] **Omnibox (Command Palette):** The intent-driven input system and floating AI button.
-- [ ] **Browser Node (WebKit Integration):** A draggable, resizable `WKWebView` node on the canvas to explore the web.
+- [x] **Floating Browser UI (WebKit):** A high-fidelity, draggable, resizable floating window with advanced navigation and glassmorphic design.
 - [ ] **Code Editor Node:** A lightweight syntax-highlighting text editor node to view and modify code.
 - [ ] **Terminal Node:** An embedded shell execution environment node to run build commands.
 
