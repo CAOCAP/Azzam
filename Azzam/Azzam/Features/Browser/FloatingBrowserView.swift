@@ -125,8 +125,11 @@ struct FloatingBrowserView: View {
     
     private var resizeHandleOverlay: some View {
         VStack {
-            if handleCorner == .topLeft || handleCorner == .topRight { Spacer(minLength: 0) }
+            // If handle is at the bottom, push it down with a top spacer
+            if handleCorner == .bottomLeft || handleCorner == .bottomRight { Spacer(minLength: 0) }
+            
             HStack {
+                // If handle is on the right, push it right with a left spacer
                 if handleCorner == .topRight || handleCorner == .bottomRight { Spacer(minLength: 0) }
                 
                 Image(systemName: handleIcon)
@@ -156,9 +159,12 @@ struct FloatingBrowserView: View {
                             }
                     )
                 
+                // If handle is on the left, push it left with a right spacer
                 if handleCorner == .topLeft || handleCorner == .bottomLeft { Spacer(minLength: 0) }
             }
-            if handleCorner == .bottomLeft || handleCorner == .bottomRight { Spacer(minLength: 0) }
+            
+            // If handle is at the top, push it up with a bottom spacer
+            if handleCorner == .topLeft || handleCorner == .topRight { Spacer(minLength: 0) }
         }
     }
     
