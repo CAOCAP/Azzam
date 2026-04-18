@@ -1,18 +1,10 @@
 import SwiftUI
-import WebKit
 
 struct FloatingBrowserView: View {
     @ObservedObject var manager: FloatingWindowManager
+    @EnvironmentObject private var browserState: BrowserWindowState
     let containerSize: CGSize
-    
-    // Web State
-    @State private var isLoading: Bool = false
-    @State private var progress: Double = 0
-    @State private var canGoBack: Bool = false
-    @State private var canGoForward: Bool = false
-    @State private var pageTitle: String = ""
-    @State private var webCommand: WebCommand = .none
-    
+
     // For resizing
     @State private var dragTranslation: CGSize = .zero
     // For full-screen drag-to-dismiss
@@ -49,29 +41,31 @@ struct FloatingBrowserView: View {
         }
     }
     
-    private var topBarGesture: some Gesture {
-        DragGesture()
-            .onChanged { value in
-                if value.translation.height > 0 {
-                    withAnimation(.interactiveSpring()) {
-                        fullScreenDragOffset = value.translation.height
+    private var topBarGesture: AnyGesture<DragGesture.Value> {
+        AnyGesture(
+            DragGesture()
+                .onChanged { value in
+                    if value.translation.height > 0 {
+                        withAnimation(.interactiveSpring()) {
+                            fullScreenDragOffset = value.translation.height
+                        }
                     }
                 }
-            }
-            .onEnded { value in
-                if value.translation.height > 120 {
-                    withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                        manager.browserSizeLevel = .medium
-                        isExpanding = false
-                        fullScreenDragOffset = 0
-                        playHaptic()
-                    }
-                } else {
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
-                        fullScreenDragOffset = 0
+                .onEnded { value in
+                    if value.translation.height > 120 {
+                        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                            manager.browserSizeLevel = .medium
+                            isExpanding = false
+                            fullScreenDragOffset = 0
+                            playHaptic()
+                        }
+                    } else {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                            fullScreenDragOffset = 0
+                        }
                     }
                 }
-            }
+        )
     }
     
     var body: some View {
@@ -92,112 +86,36 @@ struct FloatingBrowserView: View {
                         )
                 )
             
-            VStack(spacing: 0) {
-                // Navigation Bar Area
-                VStack(spacing: 0) {
-                    // Top Grab/Pill
-                    Capsule()
-                        .fill(Color.secondary.opacity(0.3))
-                        .frame(width: 36, height: 4)
-                        .padding(.top, 8)
-                        .padding(.bottom, 4)
-                    
-                    HStack(spacing: 12) {
-                        // Navigation Controls
-                        HStack(spacing: 16) {
-                            navButton(systemName: "chevron.left", enabled: canGoBack) {
-                                webCommand = .goBack
-                            }
-                            navButton(systemName: "chevron.right", enabled: canGoForward) {
-                                webCommand = .goForward
-                            }
+            BrowserContentView(
+                browserState: browserState,
+                showsGrabber: true,
+                topBarGesture: isFullScreen ? topBarGesture : nil
+            ) {
+                if isFullScreen {
+                    Button(action: {
+                        withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
+                            manager.browserSizeLevel = .medium
+                            isExpanding = false
+                            playHaptic()
                         }
-                        .padding(.leading, 12)
-                        
-                        // Address/Title Field
-                        HStack {
-                            if isLoading {
-                                ProgressView()
-                                    .scaleEffect(0.7)
-                                    .frame(width: 14, height: 14)
-                            } else {
-                                Image(systemName: "lock.fill")
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.secondary)
-                            }
-                            
-                            Text(pageTitle.isEmpty ? "Search or enter website" : pageTitle)
-                                .font(.system(size: 13, weight: .medium, design: .rounded))
-                                .foregroundColor(.primary.opacity(0.7))
-                                .lineLimit(1)
-                            
-                            Spacer()
-                        }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(
-                            Capsule()
-                                .fill(Color.primary.opacity(0.06))
-                        )
-                        
-                        // Action Buttons
-                        HStack(spacing: 12) {
-                            if isFullScreen {
-                                Button(action: {
-                                    withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
-                                        manager.browserSizeLevel = .medium
-                                        isExpanding = false
-                                        playHaptic()
-                                    }
-                                }) {
-                                    Image(systemName: "arrow.down.right.and.arrow.up.left")
-                                        .font(.system(size: 14, weight: .bold))
-                                        .foregroundColor(.secondary)
-                                        .padding(8)
-                                        .background(Circle().fill(Color.secondary.opacity(0.1)))
-                                }
-                            } else {
-                                Button(action: {
-                                    webCommand = .reload
-                                }) {
-                                    Image(systemName: "arrow.clockwise")
-                                        .font(.system(size: 14, weight: .semibold))
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                        }
-                        .padding(.trailing, 12)
+                    }) {
+                        Image(systemName: "arrow.down.right.and.arrow.up.left")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(.secondary)
+                            .padding(8)
+                            .background(Circle().fill(Color.secondary.opacity(0.1)))
                     }
-                    .padding(.bottom, 10)
-                    
-                    // Progress Indicator Line
-                    ZStack(alignment: .leading) {
-                        Rectangle()
-                            .fill(Color.clear)
-                            .frame(height: 2)
-                        
-                        if isLoading && progress < 1.0 {
-                            Rectangle()
-                                .fill(Color.blue.opacity(0.8))
-                                .frame(width: activeWidth * CGFloat(progress), height: 2)
-                        }
+                    .buttonStyle(PlainButtonStyle())
+                } else {
+                    Button(action: {
+                        browserState.reload()
+                    }) {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.secondary)
                     }
+                    .buttonStyle(PlainButtonStyle())
                 }
-                .contentShape(Rectangle())
-                .gesture(isFullScreen ? topBarGesture : nil)
-                
-                // Web Content View
-                WebView(
-                    url: URL(string: "https://www.google.com")!,
-                    isLoading: $isLoading,
-                    progress: $progress,
-                    canGoBack: $canGoBack,
-                    canGoForward: $canGoForward,
-                    title: $pageTitle,
-                    command: $webCommand
-                )
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color.white.opacity(0.02))
             }
             .clipShape(RoundedRectangle(cornerRadius: isFullScreen ? (fullScreenDragOffset > 0 ? 32 : 0) : 32, style: .continuous))
             
@@ -209,15 +127,6 @@ struct FloatingBrowserView: View {
         .frame(width: activeWidth, height: activeWidth * (containerSize.height / containerSize.width))
         .offset(y: fullScreenDragOffset)
         .allowsHitTesting(true)
-    }
-    
-    private func navButton(systemName: String, enabled: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: 14, weight: .bold))
-                .foregroundColor(enabled ? .primary.opacity(0.7) : .primary.opacity(0.2))
-        }
-        .disabled(!enabled)
     }
     
     private var resizeHandleOverlay: some View {

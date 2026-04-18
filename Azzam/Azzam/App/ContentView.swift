@@ -8,6 +8,10 @@
 import SwiftUI
 
 struct ContentView: View {
+    @EnvironmentObject private var browserState: BrowserWindowState
+    #if os(macOS)
+    @Environment(\.openWindow) private var openWindow
+    #endif
     @State private var isOmniboxPresented = false
     @StateObject private var windowManager = FloatingWindowManager()
     
@@ -30,7 +34,16 @@ struct ContentView: View {
                 }
                 .keyboardShortcut("k", modifiers: .command)
                 .opacity(0)
-                
+
+                #if os(macOS)
+                Button("") {
+                    openBrowserWindow()
+                }
+                .keyboardShortcut("b", modifiers: .command)
+                .opacity(0)
+                #endif
+
+                #if !os(macOS)
                 // Floating Browser View
                 FloatingBrowserView(manager: windowManager, containerSize: geometry.size)
                     // Apply corner dragging modifier
@@ -41,6 +54,7 @@ struct ContentView: View {
                         itemSize: windowManager.browserSizeLevel.dimensions(in: geometry.size)
                     )
                     .zIndex(10)
+                #endif
                 
                 // Floating AI Button
                 FloatingAiButton {
@@ -65,11 +79,29 @@ struct ContentView: View {
             }
             // Ensure ZStack takes up the full GeometryReader
             .frame(width: geometry.size.width, height: geometry.size.height)
+            #if os(macOS)
+            .onAppear {
+                openBrowserWindowIfNeeded()
+            }
+            #endif
         }
         .ignoresSafeArea(.keyboard)
     }
+
+    #if os(macOS)
+    private func openBrowserWindowIfNeeded() {
+        guard !browserState.hasOpenedInitialWindow else { return }
+        browserState.hasOpenedInitialWindow = true
+        openWindow(id: BrowserWindowState.windowID)
+    }
+
+    private func openBrowserWindow() {
+        openWindow(id: BrowserWindowState.windowID)
+    }
+    #endif
 }
 
 #Preview {
     ContentView()
+        .environmentObject(BrowserWindowState())
 }

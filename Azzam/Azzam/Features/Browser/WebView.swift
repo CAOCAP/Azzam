@@ -22,13 +22,7 @@ enum WebCommand: Equatable {
 }
 
 struct WebView: PlatformViewRepresentable {
-    let url: URL
-    @Binding var isLoading: Bool
-    @Binding var progress: Double
-    @Binding var canGoBack: Bool
-    @Binding var canGoForward: Bool
-    @Binding var title: String
-    @Binding var command: WebCommand
+    @ObservedObject var state: BrowserWindowState
     
     // Cross-platform view creation
     #if canImport(UIKit)
@@ -50,26 +44,27 @@ struct WebView: PlatformViewRepresentable {
     #endif
     
     private func createWebView(context: Context) -> WKWebView {
-        let webView = WKWebView()
+        let webView = state.webView
         webView.navigationDelegate = context.coordinator
-        webView.allowsBackForwardNavigationGestures = true
-        #if canImport(UIKit)
-        webView.backgroundColor = .clear
-        webView.isOpaque = false
-        #endif
-        
+
         context.coordinator.setupObservers(for: webView)
         return webView
     }
     
     private func updateWebView(_ webView: WKWebView, context: Context) {
-        if webView.url == nil {
-            let request = URLRequest(url: url)
-            webView.load(request)
+        let needsInitialLoad = webView.url == nil && context.coordinator.lastLoadedURL == nil
+        let urlChangedOutsideWebView = context.coordinator.lastLoadedURL != state.currentURL
+
+        if needsInitialLoad || urlChangedOutsideWebView {
+            context.coordinator.lastLoadedURL = state.currentURL
+
+            if webView.url != state.currentURL || needsInitialLoad {
+                webView.load(URLRequest(url: state.currentURL))
+            }
         }
         
-        if command != .none {
-            switch command {
+        if state.command != .none {
+            switch state.command {
             case .goBack: webView.goBack()
             case .goForward: webView.goForward()
             case .reload: webView.reload()
@@ -77,40 +72,72 @@ struct WebView: PlatformViewRepresentable {
             }
             
             DispatchQueue.main.async {
-                command = .none
+                self.state.command = .none
             }
         }
     }
     
     func makeCoordinator() -> Coordinator {
-        Coordinator(self)
+        Coordinator(state: state)
     }
     
     class Coordinator: NSObject, WKNavigationDelegate {
-        var parent: WebView
+        let state: BrowserWindowState
         var observers: [NSKeyValueObservation] = []
+        var lastLoadedURL: URL?
+        private var observedWebViewID: ObjectIdentifier?
         
-        init(_ parent: WebView) {
-            self.parent = parent
+        init(state: BrowserWindowState) {
+            self.state = state
         }
         
         func setupObservers(for webView: WKWebView) {
+            let webViewID = ObjectIdentifier(webView)
+            guard observedWebViewID != webViewID else { return }
+
+            observers.forEach { $0.invalidate() }
+            observers.removeAll()
+            observedWebViewID = webViewID
+            lastLoadedURL = webView.url
+
             observers = [
-                webView.observe(\.estimatedProgress, options: .new) { webView, change in
-                    DispatchQueue.main.async { self.parent.progress = change.newValue ?? 0 }
+                webView.observe(\.estimatedProgress, options: .new) { [weak self] _, change in
+                    guard let self else { return }
+                    DispatchQueue.main.async {
+                        self.state.progress = change.newValue ?? 0
+                    }
                 },
-                webView.observe(\.isLoading, options: .new) { webView, change in
-                    DispatchQueue.main.async { self.parent.isLoading = change.newValue ?? false }
+                webView.observe(\.isLoading, options: .new) { [weak self] _, change in
+                    guard let self else { return }
+                    DispatchQueue.main.async {
+                        self.state.isLoading = change.newValue ?? false
+                    }
                 },
-                webView.observe(\.canGoBack, options: .new) { webView, change in
-                    DispatchQueue.main.async { self.parent.canGoBack = change.newValue ?? false }
+                webView.observe(\.canGoBack, options: .new) { [weak self] _, change in
+                    guard let self else { return }
+                    DispatchQueue.main.async {
+                        self.state.canGoBack = change.newValue ?? false
+                    }
                 },
-                webView.observe(\.canGoForward, options: .new) { webView, change in
-                    DispatchQueue.main.async { self.parent.canGoForward = change.newValue ?? false }
+                webView.observe(\.canGoForward, options: .new) { [weak self] _, change in
+                    guard let self else { return }
+                    DispatchQueue.main.async {
+                        self.state.canGoForward = change.newValue ?? false
+                    }
                 },
-                webView.observe(\.title, options: .new) { webView, change in
+                webView.observe(\.title, options: .new) { [weak self] webView, _ in
+                    guard let self else { return }
                     let newTitle = webView.title ?? ""
-                    DispatchQueue.main.async { self.parent.title = newTitle }
+                    DispatchQueue.main.async {
+                        self.state.pageTitle = newTitle
+                    }
+                },
+                webView.observe(\.url, options: .new) { [weak self] webView, _ in
+                    guard let self, let url = webView.url else { return }
+                    self.lastLoadedURL = url
+                    DispatchQueue.main.async {
+                        self.state.currentURL = url
+                    }
                 }
             ]
         }
