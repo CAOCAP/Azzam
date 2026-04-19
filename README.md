@@ -1,6 +1,6 @@
 <img width="100" height="100" alt="logo" src="https://github.com/user-attachments/assets/eaf5e37f-da13-49aa-8e5f-d982116b15c4" /> <img width="100" height="100" alt="Azzam-dev" src="https://github.com/user-attachments/assets/f156f7ce-263b-4032-b999-cf59ad3184e6" />
 
-# CAOCAP Azzam: The IDEA
+# 🚀 CAOCAP Azzam: The IDEA
 > **Integrated Development Environment Agent**
 
 CAOCAP Azzam is not just an IDE—it is an **IDEA**. It is an ambitious, open-source reimagining of the workspace where the environment itself is the agent. It collapses the distance between browsing, coding, and execution into a single, intent-driven interface.
@@ -23,7 +23,10 @@ Forget tabs. Azzam provides a **Infinite Canvas** where your tools exist as inte
 *   **Agent Intelligence**: Powered by cutting-edge LLMs (Gemini, Claude, GPT) integrated via remote APIs for state-of-the-art reasoning.
 *   **WebKit Core**: Utilizing Apple's native browser engine for lightweight and secure web exploration.
 
-## 🚀 Status: Foundations & Core Nodes
+## ⚠️ Development Status: Day 4
+This project is in its absolute infancy. We are currently building the foundational proof-of-concept.
+> If you are reading this, you are discovering the project at its inception. We welcome early visionaries, engineers, and contributors to join us at the ground level and help shape the future of this platform.
+
 We are currently in the **Foundations** phase. We have successfully implemented:
 - [x] 100k x 100k Canvas
 - [x] Draggable/Resizable Floating Browser
